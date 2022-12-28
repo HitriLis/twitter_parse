@@ -1,6 +1,7 @@
 from json.decoder import JSONDecodeError
 import httpx
 from settings import settings
+from redis import redis
 
 
 test = 'http://uJEM1BHn:HBPjf7Tc@212.193.143.51:48707'
@@ -46,6 +47,11 @@ class TwitterClient:
                 print(e)
 
     async def get_user_screen_name(self, screen_name: str):
+        count_request = await redis.get(settings.users_show_key)
+        if not count_request:
+            await redis.set(settings.users_show_key, 1, expire=settings.users_show_key_expire)
+        else:
+            await redis.set(settings.users_show_key,  count_request + 1)
         search_params = {
             "screen_name": screen_name
         }

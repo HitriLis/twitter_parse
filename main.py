@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from parser.routers.twitter_parser import router as parser_router
+from redis import redis
 
 
 app = FastAPI()
@@ -17,11 +18,12 @@ app.add_middleware(
 )
 
 
-# @app.on_event('startup')
-# async def startup():
-#     await database.connect()
-#
-#
-# @app.on_event('shutdown')
-# async def shutdown():
-#     await database.disconnect()
+@app.on_event('startup')
+async def startup():
+    await redis.connect()
+
+
+@app.on_event('shutdown')
+async def shutdown():
+    await redis.disconnect()
+

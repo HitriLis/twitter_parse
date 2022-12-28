@@ -23,4 +23,4 @@ class CustomJSONEncoder(JSONEncoder):
 
 def get_name_from_link(link: str) -> str:
     result = re.search(r"^https?:\/\/(?:www\.)?twitter\.com\/(?:#!\/)?@?([^/?#]*)(?:[?#].*)?$", link, re.M)
-    return result.group(1)
+    return result.group(1) if result else None

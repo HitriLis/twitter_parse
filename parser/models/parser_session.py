@@ -26,7 +26,7 @@ class ParserSessionManager:
                 username=get_name_from_link(link),
                 status=StatusName.pending,
                 session_id=obj_db.id
-            ) for link in links
+            ) for link in links if get_name_from_link(link)
         ])
         await db_session.flush()
         await db_session.commit()

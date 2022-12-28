@@ -3,12 +3,13 @@ from pydantic import BaseSettings, validator
 
 
 class Settings(BaseSettings):
-    database_url: str = ''
+    database_url: str
     base_root: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    static_url: str = '/static/'
-    static_root: str = os.path.join(base_root, 'static')
     database_pool_size: int = 1
-    time_zone: str = 'Europe/Moscow'
+    redis_url: str
+    limited_users_show: int = 900
+    users_show_key_expire: int = 900
+    users_show_key: str = 'users_show_key'
     vendor_twitter_api_key: str
     vendor_twitter_api_secret_key: str
     vendor_twitter_api_bearer_token: str

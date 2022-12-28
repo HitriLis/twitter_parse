@@ -7,11 +7,19 @@ from parser.schemes import ParserCreate, ParserResponse, UserDataResponse
 from parser.models import ParserSession
 from providers.twitter_conector import twitter_api
 from services.parse import parse_users
+from redis import redis
+from settings import settings
 
 
 @router.post("/parse", tags=['Parser session'],
              responses={200: {"model": ParserResponse}})
-async def create_parse(item: ParserCreate,  background_tasks: BackgroundTasks, db_session: AsyncSession = Depends(get_session)):
+async def create_parse(item: ParserCreate, background_tasks: BackgroundTasks, db_session: AsyncSession = Depends(get_session)):
+
+    count_request = await redis.get(settings.users_show_key)
+    if count_request and count_request + len(item.links) > settings.limited_users_show:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f'Превышен допустимый лимит запросов за 15 минут. Осталось {settings.limited_users_show - (count_request + len(item.links))}')
+
     session = await ParserSession.objects.create(db_session, links=item.links)
     background_tasks.add_task(parse_users, session_id=session.id, db_session=db_session)
     return JSONResponse(status_code=200, content={"session_id": session.id})
