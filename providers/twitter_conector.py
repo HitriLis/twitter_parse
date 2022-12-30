@@ -1,10 +1,10 @@
-from json.decoder import JSONDecodeError
+import asyncio
+import time
 import httpx
+from datetime import datetime
+from json.decoder import JSONDecodeError
 from settings import settings
 from redis import redis
-
-
-test = 'http://uJEM1BHn:HBPjf7Tc@212.193.143.51:48707'
 
 
 class TwitterClient:
@@ -14,6 +14,7 @@ class TwitterClient:
 
     def __init__(self):
         self.base_url = 'https://api.twitter.com/1.1/'
+        self.proxies_url = 'http://uJEM1BHn:HBPjf7Tc@212.193.143.51:48707'
         self.base_headers = {
             'Authorization': f'Bearer {settings.vendor_twitter_api_bearer_token}',
         }
@@ -37,21 +38,20 @@ class TwitterClient:
         :return:
         """
 
-        async with httpx.AsyncClient(proxies=test, headers=self.base_headers) as client:
+        async with httpx.AsyncClient(proxies=self.proxies_url, headers=self.base_headers) as client:
             url = self.__urljoin(url)
+            start_time = time.time()
             try:
                 response = await client.request(method=method, url=url, json=json_data, **kwargs)
+                end_time = round(time.time() - start_time, 2)
                 response_data = self._force_json(response)
+                if end_time < 1:
+                    await asyncio.sleep(1 - end_time)
                 return response_data, response.status_code
             except Exception as e:
                 print(e)
 
     async def get_user_screen_name(self, screen_name: str):
-        count_request = await redis.get(settings.users_show_key)
-        if not count_request:
-            await redis.set(settings.users_show_key, 1, expire=settings.users_show_key_expire)
-        else:
-            await redis.set(settings.users_show_key,  count_request + 1)
         search_params = {
             "screen_name": screen_name
         }
@@ -66,6 +66,11 @@ class TwitterClient:
         } if status_code == 200 else None
 
     async def get_tweets(self, twitter_id: int):
+        count_request = await redis.get(settings.redis_tweets_key)
+        if not count_request:
+            await redis.set(settings.redis_tweets_key, 1, expire=settings.tweets_key_key_expire)
+        else:
+            await redis.set(settings.redis_tweets_key, count_request + 1)
         search_params = {
             "user_id": twitter_id,
             'count': 7

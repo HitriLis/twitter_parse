@@ -15,10 +15,9 @@ from settings import settings
              responses={200: {"model": ParserResponse}})
 async def create_parse(item: ParserCreate, background_tasks: BackgroundTasks, db_session: AsyncSession = Depends(get_session)):
 
-    count_request = await redis.get(settings.users_show_key)
-    if count_request and count_request + len(item.links) > settings.limited_users_show:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f'Превышен допустимый лимит запросов за 15 минут. Осталось {settings.limited_users_show - (count_request + len(item.links))}')
+    if len(item.links) > 500:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail='Превышен допустимый лимит элементов в списке')
 
     session = await ParserSession.objects.create(db_session, links=item.links)
     background_tasks.add_task(parse_users, session_id=session.id, db_session=db_session)
@@ -48,6 +47,12 @@ async def get_username(username: str):
 @router.get("/users/tweets/{twitter_id}", tags=['Parser session'],
             responses={200: {"model": UserDataResponse}})
 async def get_username(twitter_id: str):
+
+    count_request = await redis.get(settings.redis_tweets_key)
+    if count_request and count_request > settings.limited_get_tweets:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail='Превышен допустимый лимит запросов в сутки. Осталось')
+
     data_user = await twitter_api.get_tweets(twitter_id)
     if not data_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Страница не найдена')
